@@ -4,19 +4,48 @@ from tools.logger import setup_logger
 
 load_dotenv()
 
-# Загрузка URL сервера
-SERVER_URL = os.getenv('SERVER_URL')
-GLOBAL_SERVER_URL = os.getenv('GLOBAL_SERVER_URL')
+# ----- Настройка сервера -----
 
-# Определение URL API сервера
-SERVER_API_URL = GLOBAL_SERVER_URL if GLOBAL_SERVER_URL else SERVER_URL
+"""
+-- SCRAPPER_SERVER_PORT -- 
 
-# Загрузка порта сервера
-SERVER_PORT = os.getenv('SERVER_PORT')
-GLOBAL_SERVER_PORT = os.getenv('GLOBAL_SERVER_PORT')
+Порт сервера установленный в .env файле каталога parser_server.
+Используется если сервер запускается отдельно от всего проекта или если значение глобального порта не установлено.
+"""
+SCRAPPER_SERVER_PORT = os.getenv('SCRAPPER_SERVER_PORT')
 
-# Определение порта API сервера
-SERVER_API_PORT = GLOBAL_SERVER_PORT if GLOBAL_SERVER_PORT else SERVER_PORT
+"""
+-- GLOBAL_SCRAPPER_SERVER_PORT -- 
+
+Порт сервера установленный в .env файле глобального уровня.
+Используется если сервер запускается совместно с другими проектами.
+"""
+GLOBAL_SCRAPPER_SERVER_PORT = os.getenv('GLOBAL_SCRAPPER_SERVER_PORT')
+
+# Определение порта сервера
+SERVER_PORT = GLOBAL_SCRAPPER_SERVER_PORT if GLOBAL_SCRAPPER_SERVER_PORT else SCRAPPER_SERVER_PORT
+
+# ----- Настройка API  -----
+
+"""
+-- SCRAPPER_SERVER_GET_NEWS_DATA_API_PATH -- 
+
+Путь для получения данных новостей по API. Устанавливается в .env файле каталога parser_server.
+"""
+SCRAPPER_SERVER_GET_NEWS_DATA_API_PATH = os.getenv('SCRAPPER_SERVER_GET_NEWS_DATA_API_PATH')
+
+"""
+-- GLOBAL_SCRAPPER_SERVER_GET_NEWS_DATA_API_PATH -- 
+
+Путь для получения данных новостей по API.
+Используется если сервер запускается совместно с другими проектами.
+"""
+GLOBAL_SCRAPPER_SERVER_GET_NEWS_DATA_API_PATH = os.getenv('GLOBAL_SCRAPPER_SERVER_GET_NEWS_DATA_API_PATH')
+
+# Определение пути API
+NEWS_DATA_API_PATH = GLOBAL_SCRAPPER_SERVER_GET_NEWS_DATA_API_PATH if GLOBAL_SCRAPPER_SERVER_GET_NEWS_DATA_API_PATH else SCRAPPER_SERVER_GET_NEWS_DATA_API_PATH
+
+
 
 # Логгеры для различных компонентов
 server_logger = setup_logger("server", "server")

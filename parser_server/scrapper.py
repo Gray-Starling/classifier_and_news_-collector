@@ -102,7 +102,13 @@ async def main():
     existing_articles = set()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(script_dir, "news.csv")
+    data_dir = os.path.join(script_dir, 'data')  # формируем путь к папке 'data'
+
+    if not os.path.exists(data_dir):  # проверяем существование папки
+        os.makedirs(data_dir)  # создаем папку, если она не существует
+
+    file_path = os.path.join(data_dir, 'news_data.csv')
+    # file_path = os.path.join(script_dir, "./data/news_data.csv")
     existing_articles = read_existing_articles(file_path)
 
     try:

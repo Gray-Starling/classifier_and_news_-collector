@@ -3,11 +3,11 @@ import threading
 import asyncio
 from flask import Flask, send_file
 from scrapper import main as scrapper_main
-from config import server_logger, SERVER_API_URL, SERVER_API_PORT
+from config import server_logger, SERVER_PORT, NEWS_DATA_API_PATH
 
 app = Flask(__name__)
-HOST = SERVER_API_URL
-PORT = SERVER_API_PORT
+PORT = SERVER_PORT
+API_PATH = NEWS_DATA_API_PATH
 
 def run_scrapper_periodically():
    
@@ -21,14 +21,14 @@ def run_scrapper_periodically():
         server_logger.info("Sleeping for 10 minutes. \n")
         time.sleep(600)
 
-@app.route('/api/v1/news')
+@app.route(API_PATH)
 def index():
-    file_path = "news.csv"  # Путь к вашему файлу
-    return send_file(file_path, as_attachment=True)  # Отправка файла как вложения
+    file_path = "./data/news_data.csv"
+    return send_file(file_path, as_attachment=True)
 
 if __name__ == "__main__":
     scrapper_thread = threading.Thread(target=run_scrapper_periodically)
     scrapper_thread.daemon = True
     scrapper_thread.start()
 
-    app.run(host=HOST, port=PORT)
+    app.run(port=PORT)

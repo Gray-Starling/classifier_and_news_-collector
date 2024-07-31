@@ -70,7 +70,7 @@ async def parse_articles_in_category(session, url):
     """
     lenta_logger.info("-- Parsing articles in category %s", url)
 
-    file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../news.csv"))
+    file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/news_data.csv"))
     existing_articles = read_existing_articles(file_path)
 
     try:

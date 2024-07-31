@@ -1,48 +1,15 @@
 import pandas as pd
-import requests
-import os
 import random
 import re
 import string
 import nltk
 import pymorphy3
+from tqdm import tqdm
 
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 
 from sklearn.preprocessing import LabelEncoder
-
-from config import NEWS_DATA_API
-
-
-# Ссылка на файл
-link = NEWS_DATA_API
-file_path = "data/source/news_dataset.csv"
-
-
-async def download_data():
-    # Проверка, существует ли файл
-    if os.path.exists(file_path):
-        print(f"Файл уже существует: {file_path}")
-    else:
-        # Попытка загрузить файл
-        try:
-            response = await requests.get(link)
-            response.raise_for_status()  # Проверка успешности запроса
-        except Exception as e:
-            print("Что-то пошло не так при попытке загрузить файл:", e)
-            raise e
-
-        # Если запрос успешен, сохранить файл
-        if response.ok:
-            with open(file_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            print(f"Файл загружен и сохранен в {file_path}")
-        else:
-            print("Не удалось загрузить файл. Статус код:", response.status_code)
-            raise ValueError("Не удалось загрузить файл")
-
 
 def del_duplicates(df):
     df = df.drop_duplicates(subset=["article_link"])
@@ -157,39 +124,82 @@ def preprocess_text(df):
     def lemmatize(tokens):
         return [morph.parse(word)[0].normal_form for word in tokens]
     
-    def preprocess_text(text):
+    def preprocess(text):
         result = regular_expression(text)
         result = tokenize(result)
         result = remove_stopwords(result)
         result = lemmatize(result)
+        # print(f"Обработана строка {index}")
         return ' '.join(result)
     
-    df['text'] = df['text'].apply(preprocess_text)
+    df['text'] = df['text'].progress_apply(preprocess)
 
     return df
     
 
-async def preprocess_data():
-    try:
-        await download_data()
-    except Exception as e:
-        print("Что-то пошло не так:", e)
-
+def preprocess_data(file_path):
+    tqdm.pandas()
+    print("Считывание csv файла...")
     df = pd.read_csv(file_path)
+    print("Удаление дубликатов...")
     df = del_duplicates(df)
+    print("Удаление не нужных колонок...")
     df = del_columns(df)
+    print("Преобразование категорий...")
     df = mapping_category(df)
+    print("Преобразование категорий к числовому значению...")
     df = category_encoding(df)
+    print("Удаление пустых строк...")
     df = del_empty(df)
+    print("Преобразование текста к нижнему регистру...")
     df = to_lower_str(df)
+    print("Удаление повторяющихся заголовков...")
     df = del_repeating_titles(df)
+    print("Склеивание текста...")
     df = gluing_text(df)
+    print("Предобработка текста...")
     df = preprocess_text(df)
 
-    def random_text(count):
-        for num in range(1, count+1):
-            rand_int = random.randint(1, len(df))
-            print(df['text'].iloc[rand_int])
-            print("-"*30)
+    balanced_df = pd.DataFrame(columns=df.columns)
 
-    random_text(1)
+    df['word_count'] = df['text'].apply(lambda x: len(str(x).split()))
+    avg_word_count = df['word_count'].mean()
+
+    min_samples = df['category_name'].value_counts().min()
+
+    category_word_counts = df.groupby('category_name')['word_count'].mean()
+
+    # Функция для балансировки данных в каждой категории
+    def balancing_samples(category_data):
+        category_avg_word_count = category_data['word_count'].mean()
+
+        # Если количество строк больше min_samples
+        while len(category_data) > min_samples:
+            if category_avg_word_count > avg_word_count:
+                # Убираем самые длинные строки, пока среднее количество слов не станет <= avg_word_count
+                category_data = category_data.drop(category_data['word_count'].idxmax())
+            else:
+                # Удаляем самые короткие строки, пока среднее количество слов не станет >= avg_word_count
+                category_data = category_data.drop(category_data['word_count'].idxmin())
+
+            # Пересчитываем среднее количество слов в категории после удаления строки
+            category_avg_word_count = category_data['word_count'].mean()
+
+        # Если количество строк меньше или равно min_samples, возвращаем данные как есть
+        return category_data.reset_index(drop=True)
+
+    for category in df["category_name"].unique():
+        category_data = df[df["category_name"] == category].copy()
+        print(f"Категория обработки: '{category}'")
+
+        balanced_category_data = balancing_samples(category_data)
+
+        balanced_df = pd.concat([balanced_df, balanced_category_data], ignore_index=True)
+
+        print(f"Категория '{category}' сбалансирована. Количество строк после балансировки: {len(balanced_category_data)}")
+        print()
+
+    # print("Все категории обработаны и сбалансированы.")
+
+    balanced_df.to_csv('./data/processed/data.csv', index=False)
+    print("\nДанные получены, обработаны и сохранены")
